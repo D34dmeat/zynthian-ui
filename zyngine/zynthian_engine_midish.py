@@ -30,7 +30,7 @@ from . import zynthian_engine
 from . import zynthian_controller
 
 #------------------------------------------------------------------------------
-# FluidSynth Engine Class
+# Midish Engine Class
 #------------------------------------------------------------------------------
 
 class zynthian_engine_midish(zynthian_engine):
@@ -53,7 +53,7 @@ class zynthian_engine_midish(zynthian_engine):
 		super().__init__(zyngui)
 		self.name="Midish"
 		self.nickname="MS"
-		self.command=("/usr/bin/midish", "-p", "fluidsynth", "-a", "jack", "-m", "jack" ,"-g", "1", "-j", "-o", "synth.midi-bank-select=mma", "-o", "synth.cpu-cores=3", "-o", "synth.polyphony=64")
+		self.command=("/usr/bin/midish", "-v")
 
 		self.soundfont_dirs=[
 			('_', os.getcwd()+"/data/soundfonts/sf2"),

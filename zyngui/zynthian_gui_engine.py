@@ -52,7 +52,8 @@ class zynthian_gui_engine(zynthian_gui_selector):
 		["FS", ("FluidSynth","FluidSynth - Sampler")],
 		["LS", ("LinuxSampler","LinuxSampler - Sampler")],
 		["BF", ("setBfree","setBfree - Hammond Emulator")],
-		["MD", ("MOD-UI","MOD-UI - Plugin Host")]
+		["MD", ("MOD-UI","MOD-UI - Plugin Host")],
+		["MS", ("Midish","Midish-sequencer")]
 	])
 
 	def __init__(self):
@@ -88,6 +89,8 @@ class zynthian_gui_engine(zynthian_gui_selector):
 				self.zyngines[eng]=zynthian_engine_setbfree(zynthian_gui_config.zyngui)
 			elif eng=="MD":
 				self.zyngines[eng]=zynthian_engine_modui(zynthian_gui_config.zyngui)
+			elif eng=="MS":
+				self.zyngines[eng]=zynthian_engine_midish(zynthian_gui_config.zyngui)
 			else:
 				return None
 			if wait>0:
