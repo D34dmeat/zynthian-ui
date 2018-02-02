@@ -55,9 +55,9 @@ class zynthian_engine_midish(zynthian_engine):
 		self.nickname="MS"
 		self.command=("/usr/bin/midish", "-v")
 
-		self.soundfont_dirs=[
-			('_', os.getcwd()+"/data/soundfonts/sf2"),
-			('MY', os.getcwd()+"/my-data/soundfonts/sf2")
+		self.media_dirs=[
+			('_', os.getcwd()+"/data/midish/media"),
+			('MY', os.getcwd()+"/my-data/midish/media")
 		]
 
 		self.start(True)
@@ -100,7 +100,7 @@ class zynthian_engine_midish(zynthian_engine):
 	# ---------------------------------------------------------------------------
 
 	def get_bank_list(self, layer=None):
-		return self.get_filelist(self.soundfont_dirs,"sf2")
+		return self.get_filelist(self.media_dirs,"songs")
 
 	def set_bank(self, layer, bank):
 		if self.load_soundfont(bank[0]):
