@@ -56,8 +56,13 @@ class zynthian_gui_preset(zynthian_gui_selector):
 		super().show()
 
 	def select_action(self, i):
-		zynthian_gui_config.zyngui.curlayer.set_preset(i)
-		zynthian_gui_config.zyngui.show_screen('control')
+		if zynthian_gui_config.zyngui.curlayer.engine.nickname=='MS':
+			zynthian_gui_config.zyngui.curlayer.set_preset(i)
+			zynthian_gui_config.zyngui.show_screen('seqcontrol')
+		
+		else:
+			zynthian_gui_config.zyngui.curlayer.set_preset(i)
+			zynthian_gui_config.zyngui.show_screen('control')
 
 	def preselect_action(self):
 		return zynthian_gui_config.zyngui.curlayer.preload_preset(self.index)

@@ -53,7 +53,9 @@ from zyngui.zynthian_gui_midich import zynthian_gui_midich
 from zyngui.zynthian_gui_transpose import zynthian_gui_transpose
 from zyngui.zynthian_gui_bank import zynthian_gui_bank
 from zyngui.zynthian_gui_preset import zynthian_gui_preset
+from zyngui.zynthian_gui_midishio import zynthian_gui_midishio
 from zyngui.zynthian_gui_control import zynthian_gui_control
+from zyngui.zynthian_gui_seqcontrol import zynthian_gui_seqcontrol
 from zyngui.zynthian_gui_control_xy import zynthian_gui_control_xy
 #from zyngui.zynthian_gui_control_osc_browser import zynthian_gui_osc_browser
 
@@ -127,7 +129,9 @@ class zynthian_gui:
 		self.screens['bank']=zynthian_gui_bank()
 		self.screens['preset']=zynthian_gui_preset()
 		self.screens['control']=zynthian_gui_control()
+		self.screens['seqcontrol']=zynthian_gui_seqcontrol()
 		self.screens['control_xy']=zynthian_gui_control_xy()
+		self.screens['midishio']=zynthian_gui_midishio()
 		# Show initial screen => Channel list
 		self.show_screen('layer')
 		# Try to load "default snapshot" or show "load snapshot" popup

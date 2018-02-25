@@ -35,6 +35,8 @@ from threading  import Thread
 from queue import Queue, Empty
 from string import Template
 from collections import OrderedDict
+from subprocess import check_output, Popen, PIPE
+
 
 from . import zynthian_controller
 

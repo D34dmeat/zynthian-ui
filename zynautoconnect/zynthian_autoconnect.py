@@ -46,6 +46,7 @@ engine_list = [
 	"zynaddsubfx",
 	"fluidsynth",
 	"LinuxSampler",
+	"midish_in",
 	"setBfree"
 	#"mod-host"
 ]
