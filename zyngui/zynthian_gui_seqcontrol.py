@@ -93,20 +93,42 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 	
 	def transport_release(self, event):
 		x1, y1 = ( event.x - 1 ), ( event.y - 1 )
+		end=zynthian_gui_config.zyngui.curlayer.engine.get_end()
 		
 		canvas = event.widget
+		canvasw=canvas.winfo_width()
+		logging.debug("math canvas %s" % canvasw)
+		logging.debug("math x1 %s" % x1)
+		logging.debug("math end %s" % end)
 		canvas.coords('tbar', 0, 25, x1, 75)
-		zynthian_gui_config.zyngui.curlayer.engine.set_pos('4:3:6')
+		pos= round(end[0]*(x1/canvasw))
+		zynthian_gui_config.zyngui.curlayer.engine.set_pos(pos)
 		x = canvas.canvasx(event.x)
 		y = canvas.canvasy(event.y)
 		#print canvas.find_closest(x, y)	
 
 	def rec(self):
-		self.rec.flash()
-		zynthian_gui_config.zyngui.curlayer.engine.rec()
-
+		if self.playing:
+			#self.playing=False
+			self.rec.flash(20)
+			zynthian_gui_config.zyngui.curlayer.engine.rec()
+		else:
+			self.playing=True
+			self.rec.flash()
+			zynthian_gui_config.zyngui.curlayer.engine.rec()
+		
+	def pause(self):
+		if self.playing:
+			self.playing=False
+			zynthian_gui_config.zyngui.curlayer.engine.pause()
+		
+			
+	def stop(self):
+		if self.playing:
+			self.playing=False
+		zynthian_gui_config.zyngui.curlayer.engine.stop()
+		
 	def play(self):
-	
 		if self.playing:
 			self.playing=False
 			self.play.flash()
@@ -395,7 +417,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			bg=zynthian_gui_config.color_panel_bg,
 			#fg=zynthian_gui_config.color_panel_tx,
 			relief = 'groove')
-		transport.grid(row=2, column=0, columnspan=9, padx=(0,2), sticky="w+e")	
+		transport.grid(row=2, column=0, columnspan=9, padx=(0,2), sticky="we")	
 		tbar = transport.create_rectangle(0, 0, 2, 75, fill="blue", tags=('tbar'))
 		transport.bind( "<B1-Motion>", self.transport_drag )
 		transport.bind( "<ButtonRelease-1>", self.transport_release )

@@ -445,7 +445,15 @@ class zynthian_engine_midish(zynthian_engine):
 	
 	def set_pos(self,*args):
 		self.proc_cmd("g %s"%args[0])
+		self.getpos()
+		self.pos_label.set(str(self.song_pos))
 	
+	def getpos(self,*args):
+		logging.info("current pos %s" %self.proc_cmd("getpos"))
+		
+	def get_end(self,*args):
+		return [int(i) for i in self.proc_cmd("mend")]
+		
 	def pause(self,*args):
 		self.proc_cmd("i")
 
