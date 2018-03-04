@@ -351,9 +351,12 @@ class zynthian_engine_midish(zynthian_engine):
 			self.proc_cmd("inew keyboard {0 1}")
 			self.proc_cmd("onew output {1 1}")
 			self.proc_cmd("print [iexists keyboard]")
+			self.proc_cmd("geti")
+			self.proc_cmd("geto")
 			self.proc_cmd("print [oexists output]")
+			self.proc_cmd("getf")
 
-			self.proc_cmd("i")
+			#self.proc_cmd("i")
 			#self.proc_cmd('load "{0}"'.format("/zynthian/zynthian-ui/data/midish/media/songs/" + "sample.sng"))
 			#self.proc_cmd("p")
 			
@@ -452,7 +455,8 @@ class zynthian_engine_midish(zynthian_engine):
 		logging.info("current pos %s" %self.proc_cmd("getpos"))
 		
 	def get_end(self,*args):
-		return [int(i) for i in self.proc_cmd("mend")]
+		x=[int(i) for i in self.proc_cmd("mend")]
+		return x[len(x)-1]
 		
 	def pause(self,*args):
 		self.proc_cmd("i")

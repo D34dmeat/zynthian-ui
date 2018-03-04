@@ -101,7 +101,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		logging.debug("math x1 %s" % x1)
 		logging.debug("math end %s" % end)
 		canvas.coords('tbar', 0, 25, x1, 75)
-		pos= round(end[0]*(x1/canvasw))
+		pos= round(end*(x1/canvasw))
 		zynthian_gui_config.zyngui.curlayer.engine.set_pos(pos)
 		x = canvas.canvasx(event.x)
 		y = canvas.canvasy(event.y)
@@ -413,12 +413,12 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			font=zynthian_gui_config.font_listbox,
 			relief = 'groove', text = "show tracks", command = self.show_tracks)
 			
-		transport = tkinter.Canvas(self.ctrlbar, width=zynthian_gui_config.display_width-2, height=100,
+		transport = tkinter.Canvas(self.ctrlbar, width=zynthian_gui_config.display_width-2, height=79,
 			bg=zynthian_gui_config.color_panel_bg,
 			#fg=zynthian_gui_config.color_panel_tx,
 			relief = 'groove')
 		transport.grid(row=2, column=0, columnspan=9, padx=(0,2), sticky="we")	
-		tbar = transport.create_rectangle(0, 0, 2, 75, fill="blue", tags=('tbar'))
+		tbar = transport.create_rectangle(2, 2, 2, 75, fill="blue", tags=('tbar'))
 		transport.bind( "<B1-Motion>", self.transport_drag )
 		transport.bind( "<ButtonRelease-1>", self.transport_release )
 		
