@@ -78,7 +78,7 @@ class zynthian_gui:
 	screens={}
 	active_screen=None
 	modal_screen=None
-	screens_sequence=("admin","layer","bank","preset","control")
+	screens_sequence=("admin","layer","bank","preset","control","seqcontrol")
 	curlayer=None
 
 	dtsw={}
@@ -300,7 +300,7 @@ class zynthian_gui:
 		logging.info('Short Switch '+str(i))
 		self.start_loading()
 		if i==0:
-			if self.active_screen=='control':
+			if (self.active_screen=='control', self.active_screen=='seqcontrol'):
 				if self.screens['layer'].get_num_layers()>1:
 					logging.info("Next layer")
 					self.screens['layer'].next()
@@ -322,9 +322,15 @@ class zynthian_gui:
 					logging.debug("CLOSE MODAL => " + self.modal_screen)
 				# Else, go back to screen-1
 				else:
-					j=self.screens_sequence.index(self.active_screen)-1
-					if j<0: j=1
-					screen_back=self.screens_sequence[j]
+					if self.active_screen=='seqcontrol':
+						j=self.screens_sequence.index('control')-1
+						if j<0: j=1
+						screen_back=self.screens_sequence[j]
+					else:
+						j=self.screens_sequence.index(self.active_screen)-1
+						if j<0: j=1
+						screen_back=self.screens_sequence[j]
+
 				# If there is only one preset, go back to bank selection
 				if screen_back=='preset' and len(self.curlayer.preset_list)<=1:
 					screen_back='bank'

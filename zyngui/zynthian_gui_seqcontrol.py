@@ -63,6 +63,8 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		super().__init__('Controllers',False)
 		# Create Lock object to avoid concurrence problems
 		self.lock=Lock();
+		self.selected_track=0
+		self.playing=False
 		# Create "pusher" canvas => used in mode "select"
 		self.pusher= tkinter.Frame(self.main_frame,
 			width=zynthian_gui_config.ctrl_width,
@@ -71,11 +73,50 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			highlightthickness=0,
 			relief='flat',
 			bg = zynthian_gui_config.color_bg)
+		# Create song pos indicator
+		self.ctrlbar= tkinter.Frame(self.main_frame,
+			width=zynthian_gui_config.display_width-1,
+			height=zynthian_gui_config.ctrl_height-1,
+			bd=0,
+			highlightthickness=0,
+			relief='flat',
+			bg = zynthian_gui_config.color_bg)
+		self.song_pos=tkinter.StringVar()
+	
+	def transport_drag(self, event):
+		canvas = event.widget
+		x1, y1 = ( event.x - 1 ), ( event.y - 1 )
+		canvas.coords('tbar', 0, 25, x1, 75)
+		x = canvas.canvasx(event.x)
+		y = canvas.canvasy(event.y)
+		#print canvas.find_closest(x, y)
+	
+	def transport_release(self, event):
+		x1, y1 = ( event.x - 1 ), ( event.y - 1 )
 		
+		canvas = event.widget
+		canvas.coords('tbar', 0, 25, x1, 75)
+		zynthian_gui_config.zyngui.curlayer.engine.set_pos('4:3:6')
+		x = canvas.canvasx(event.x)
+		y = canvas.canvasy(event.y)
+		#print canvas.find_closest(x, y)	
 
 	def rec(self):
+		self.rec.flash()
 		zynthian_gui_config.zyngui.curlayer.engine.rec()
 
+	def play(self):
+	
+		if self.playing:
+			self.playing=False
+			self.play.flash()
+			zynthian_gui_config.zyngui.curlayer.engine.pause()
+		else:
+			self.playing=True
+			self.play.flash()
+			zynthian_gui_config.zyngui.curlayer.engine.play()
+		
+	
 	def show_tracks(self):
 		from tkinter import messagebox
 		tracks_list=zynthian_gui_config.zyngui.curlayer.engine.get_tracks()
@@ -88,18 +129,11 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		zynthian_gui_config.zyngui.show_modal('midishio')
 
 	def show(self):
+		self.lb_frame.height=self.lb_height-zynthian_gui_config.ctrl_height
+		self.build_ctrls()
 		super().show()
-		B = tkinter.Button(self.main_frame, text = "rec", command = zynthian_gui_config.zyngui.curlayer.engine.rec)
-		c = tkinter.Button(self.main_frame, text = "pause", command = zynthian_gui_config.zyngui.curlayer.engine.pause)
-		d = tkinter.Button(self.main_frame, text = "play", command = zynthian_gui_config.zyngui.curlayer.engine.play)
-		d.place(x = zynthian_gui_config.ctrl_width+50,y = zynthian_gui_config.ctrl_height+110)
-		c.place(x = zynthian_gui_config.ctrl_width+50,y = zynthian_gui_config.ctrl_height+80)
-		B.place(x = zynthian_gui_config.ctrl_width+50,y = zynthian_gui_config.ctrl_height+50)
 		
-		e = tkinter.Button(self.main_frame, text = "show tracks", command = self.show_tracks)
-		e.place(x = zynthian_gui_config.ctrl_width+50,y = zynthian_gui_config.ctrl_height+140)
-
-		self.click_listbox()
+		#self.click_listbox()
 
 	def hide(self):
 		if self.shown:
@@ -110,19 +144,11 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 	def fill_list(self):
 		self.list_data=[]
 		i=0
+		self.list_data.append(('new track',i,'new track'))
 		# for cscr in zynthian_gui_config.zyngui.curlayer.get_ctrl_screens():
-		for line in zynthian_gui_config.zyngui.curlayer.engine.get_tracks(i):
-			
-			line=str.replace(line, '{', '')
-			line=str.replace(line, '}', '')
-			lines=line.replace('\n', '')
-			if lines != '+ready':
-				c=lines.split(' ')
-				for cscr in c:
-			
-		#for cscr in zynthian_gui_config.zyngui.curlayer.engine.get_tracks(i):
-					self.list_data.append((cscr,i,cscr))
-					i=i+1
+		for cscr in zynthian_gui_config.zyngui.curlayer.engine.get_tracks(i):
+				self.list_data.append((cscr,i,cscr))
+				i=i+1
 		self.index=zynthian_gui_config.zyngui.curlayer.get_active_screen_index()
 		#logging.debug("get tracks %s" % (zynthian_gui_config.zyngui.curlayer.engine.get_tracks(i)))
 		super().fill_list()
@@ -137,8 +163,17 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		#Get Mutex Lock 
 		self.lock.acquire()
 		#Get controllers for the current screen
-		zynthian_gui_config.zyngui.curlayer.set_active_screen_index(self.index)
-		self.zcontrollers=zynthian_gui_config.zyngui.curlayer.get_active_screen()
+		if self.index==0:
+			zynthian_gui_config.zyngui.curlayer.engine.new_track()
+			self.fill_list()
+		elif self.index==self.selected_track:
+			zynthian_gui_config.zyngui.show_modal('midishio')
+		else:
+			iq=self.index-1
+			zynthian_gui_config.zyngui.curlayer.engine.select_track(iq)
+			logging.debug("selecting screen %d => %s" % (iq,zynthian_gui_config.zyngui.curlayer.engine.track_list[iq]))
+		#zynthian_gui_config.zyngui.curlayer.set_active_screen_index(self.index)
+		#self.zcontrollers=zynthian_gui_config.zyngui.curlayer.get_active_screen()
 		#Setup GUI Controllers
 		if self.zcontrollers:
 			logging.debug("SET CONTROLLER SCREEN %s" % (zynthian_gui_config.zyngui.curlayer.ctrl_screen_active))
@@ -189,6 +224,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		#	selectforeground=zynthian_gui_config.color_ctrl_tx,
 		#	fg=zynthian_gui_config.color_ctrl_tx_off)
 		self.select(self.index)
+		self.selected_track=self.index
 		self.set_select_path()
 
 	def set_mode_control(self):
@@ -296,5 +332,86 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 	def set_select_path(self):
 		if zynthian_gui_config.zyngui.curlayer:
 			self.select_path.set("midish sequencer" + zynthian_gui_config.zyngui.curlayer.get_presetpath())
+			
+	
+	
+	
+	def build_ctrls(self):
+		# control bar
+		
+		self.ctrlbar.grid(row=2, column=0, rowspan=1, columnspan=3, padx=(0,2), sticky="w")
+		
+		#song position indicator
+		self.pos_indicator=tkinter.Label( self.ctrlbar,
+			font=zynthian_gui_config.font_listbox,
+			textvariable = zynthian_gui_config.zyngui.curlayer.engine.pos_label,
+			relief = 'flat',
+			width = 9,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,)
+		self.pos_indicator.grid(row=0, column=0, padx=(0,2), sticky="w")
+		#self.pos_indicator.place(x = zynthian_gui_config.ctrl_width+5,y = zynthian_gui_config.ctrl_height+(zynthian_gui_config.ctrl_height/2))
+		
+		# buttons
+		
+		stop = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			text = "stop",
+			relief = 'groove',
+			command = zynthian_gui_config.zyngui.curlayer.engine.stop)
+		
+		self.play = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove',text = "play", command = self.play)	
+			
+		self.rec = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove',text = "rec", command = zynthian_gui_config.zyngui.curlayer.engine.rec)
+			
+		pause = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove', text = "pause", command = zynthian_gui_config.zyngui.curlayer.engine.pause)
+		
+		e = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove', text = "show tracks", command = self.show_tracks)
+			
+		transport = tkinter.Canvas(self.ctrlbar, width=zynthian_gui_config.display_width-2, height=100,
+			bg=zynthian_gui_config.color_panel_bg,
+			#fg=zynthian_gui_config.color_panel_tx,
+			relief = 'groove')
+		transport.grid(row=2, column=0, columnspan=9, padx=(0,2), sticky="w+e")	
+		tbar = transport.create_rectangle(0, 0, 2, 75, fill="blue", tags=('tbar'))
+		transport.bind( "<B1-Motion>", self.transport_drag )
+		transport.bind( "<ButtonRelease-1>", self.transport_release )
+		
+		stop.grid(row=1, column=1, padx=(0,2), sticky="w")
+		self.play.grid(row=1, column=2, padx=(0,2), sticky="w")
+		self.rec.grid(row=1, column=3, padx=(0,2), sticky="w")
+		pause.grid(row=1, column=4, padx=(0,2), sticky="w")
+		e.grid(row=1, column=5, padx=(0,2), sticky="w")
+		
+		#d.place(x = zynthian_gui_config.ctrl_width+5,y = zynthian_gui_config.ctrl_height+150)
+		#c.place(x = zynthian_gui_config.ctrl_width+50,y = zynthian_gui_config.ctrl_height+150)
+		#B.place(x = zynthian_gui_config.ctrl_width+150,y = zynthian_gui_config.ctrl_height+150)
+		#self.song_pos.set(zynthian_gui_config.zyngui.curlayer.engine.song_pos)
+		
+		
+		#e.place(x = zynthian_gui_config.ctrl_width+190,y = zynthian_gui_config.ctrl_height+150)
 
 #------------------------------------------------------------------------------

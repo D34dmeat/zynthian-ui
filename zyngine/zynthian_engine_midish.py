@@ -29,6 +29,7 @@ import logging
 import alsaseq
 from . import zynthian_engine
 from . import zynthian_controller
+from tkinter import StringVar
 #import zynthian_gui_config
 
 
@@ -62,6 +63,11 @@ class zynthian_engine_midish(zynthian_engine):
 			('MY', os.getcwd()+"/my-data/midish/media")
 		]
 		self.song_pos=[]
+		self.pos_label=StringVar()
+		self.current_track=None
+		self.track_list=[]
+		self.track_index=0
+		self.current_filter=None
 		self.alsaid=None
 		os.system("a2jmidi_bridge midish_out &")
 		#for line in output:
@@ -82,7 +88,6 @@ class zynthian_engine_midish(zynthian_engine):
 		#self.unload_unused_soundfonts()
 
 	def stop(self):
-		#print("what")
 		self.proc_cmd("quit",2)
 		super().stop()
 
@@ -139,6 +144,9 @@ class zynthian_engine_midish(zynthian_engine):
 			self.proc_cmd('load "{0}"'.format(preset[0]))
 		else:
 			logging.warning("starting with a new song: %s" % preset[2])
+			self.proc_cmd('reset')
+			self.setup_midish(layer)
+			self.new_track()
 
 	def cmp_presets(self, preset1, preset2):
 		if preset1[3]==preset2[3] and preset1[1][0]==preset2[1][0] and preset1[1][1]==preset2[1][1] and preset1[1][2]==preset2[1][2]:
@@ -146,10 +154,102 @@ class zynthian_engine_midish(zynthian_engine):
 		else:
 			return False
 
+	
+	# ---------------------------------------------------------------------------
+	# Controllers Management
+	# ---------------------------------------------------------------------------
+
+	# Get zynthian controllers dictionary:
+	def get_controllers_dict(self, layer):
+		#Get default static controllers
+		zctrls=super().get_controllers_dict(layer)
+		#Add specific controllers
+		# if layer.ls_chan_info:
+			# for fx_name,fx_info in list(layer.ls_chan_info['fx_instances'].items()):
+				# scrctrls=[]
+				# j=1
+				# for i,ctrl_info in enumerate(fx_info['controls']):
+					# desc=ctrl_info['DESCRIPTION'].strip()
+					# parts=desc.split(' [')
+					# ctrl_symbol=fx_name+'/'+parts[0]
+					# ctrl_name=parts[0]
+					# if len(parts)>1:
+						# sparts=parts[1].split(']')
+						# unit=sparts[0]
+					# else:
+						# unit=None
+					# logging.debug("CTRL %s => %s" % (desc,unit))
+					# if 'VALUE' in ctrl_info:
+						# value=float(ctrl_info['VALUE'])
+					# else:
+						# value=0
+					# if 'RANGE_MIN' in ctrl_info:
+						# range_min=float(ctrl_info['RANGE_MIN'])
+					# else:
+						# if unit=='dB':
+							# range_min=-30
+						# elif unit=='ms':
+							# range_min=0
+						# elif unit=='Hz':
+							# range_min=0
+						# elif unit=='Hz':
+							# range_min=0
+						# elif unit=='%':
+							# range_min=0
+						# else:
+							# range_min=0
+					# if 'RANGE_MAX' in ctrl_info:
+						# range_max=float(ctrl_info['RANGE_MAX'])
+					# else:
+						# if unit=='dB':
+							# range_max=-range_min
+						# elif unit=='ms':
+							# range_max=19999
+						# elif unit=='Hz':
+							# range_max=19999
+						# elif unit=='deg':
+							# range_max=180
+						# elif unit=='%':
+							# range_max=100
+						# else:
+							# range_max=127
+					# ctrl_options={
+						# 'value': int(value),
+						# 'value_default': int(value),
+						# 'value_min': int(range_min),
+						# 'value_max': int(range_max),
+						# 'graph_path': str(fx_info['id'])+'/'+str(i)
+					# }
+					# zctrls[ctrl_symbol]=zynthian_controller(self,ctrl_symbol,ctrl_name,ctrl_options)
+					# if len(scrctrls)==4:
+						# self._ctrl_screens.append([fx_name+':'+str(j),scrctrls])
+						# scrctrls=[]
+						# j=j+1
+					# scrctrls.append(ctrl_symbol)
+				# self._ctrl_screens.append([fx_name+':'+str(j),scrctrls])
+		return zctrls
+
+	def send_controller_value(self, zctrl):
+		if zctrl.graph_path:
+			parts=zctrl.graph_path.split('/')
+			fx_id=parts[0]
+			fx_ctrl_i=parts[1]
+			logging.debug("midish: Sending controller %s => %s" % (zctrl.name,zctrl.value))
+			try:
+				self.proc_cmd("%s %s %s\n" % (fx_id,fx_ctrl_i,zctrl.value))
+			except zyngine_lscp_error as err:
+				logging.error(err)
+			except zyngine_lscp_warning as warn:
+				logging.warning(warn)
+		else:
+			super().send_controller_value(zctrl)
+
+	
+	
 	# ---------------------------------------------------------------------------
 	# Specific functions
 	# ---------------------------------------------------------------------------
-
+	
 	def get_free_parts(self):
 		free_parts=list(range(0,16))
 		for layer in self.layers:
@@ -234,7 +334,7 @@ class zynthian_engine_midish(zynthian_engine):
 			midich=layer.get_midi_chan()
 			#alsaseq.client('sequencer', 1, 1, False)
 			#self.alsaid=alsaseq.id()
-			result=self.get_io_list()
+			#result=self.get_io_list()
 			#alsaseq.start()
 			#lines=self.proc_get_lines()
 			#for line in self.queue:
@@ -266,20 +366,93 @@ class zynthian_engine_midish(zynthian_engine):
 	def clear_midi_routes(self):
 		self.proc_cmd("reset")
 
+
+		#   sub process
+		
+	def proc_cmd(self, cmd, tout=0.1):
+		
+		if self.proc:
+			self.start_loading()
+			try:
+				logging.debug("proc command midish: "+cmd)
+				#self.proc.stdin.write(bytes(cmd + "\n", 'UTF-8'))
+				self.proc.stdin.write(cmd + "\n")
+				self.proc.stdin.flush()
+				out=self.proc_get_lines(tout)
+				lines=[]
+				for line in out:
+					line.replace('\n', '')
+					lines.append(line)
+				logging.debug("proc output:\n%s" % (lines))
+			except Exception as err:
+				out=""
+				logging.error("Can't exec engine command: %s => %s" % (cmd,err))
+			self.stop_loading()
+			return lines
+		#super().proc_cmd(self, cmd)
+		
+
+	def que_callback(self, line):
+		if line[0] == '+':
+			logging.debug("found a + line: %s" % line)
+			if line[0:4] == '+pos':
+				self.song_pos=line.replace('+pos', '').split()
+				self.pos_label.set(str(self.song_pos))
+			return False
+		else:
+			return True
+	
+	def proc_enqueue_output(self):
+		try:
+			for line in self.proc.stdout:
+				line.replace('\n', '')
+				if self.que_callback(line):
+					self.queue.put(line)
+					logging.debug("queue Out midish: %s" % line)
+		except:
+			logging.info("Finished queue thread")
+
 	def rec(self,*args):
 		self.proc_cmd("r")
-		logging.info("output =8> processing command rec")
+		logging.info("output 8=> processing command rec")
 
 	def get_tracks(self,*args):
 		tracks=self.proc_cmd('print [tlist]')
-		logging.info("output =8> processing command print tlist %s" %tracks)
-		return tracks
+		result=[]
+		for line in tracks:
+			line=str.replace(line, '{', '')
+			line=str.replace(line, '}', '')
+			lines=line.replace('\n', '')
+			if lines != '+ready':
+				c=lines.split(' ')
+				self.track_index=0
+				for b in c:
+					self.track_index+=1
+					result.append(b)
+		#logging.info("output =8> processing command print tlist %s" %result)
+		self.track_list=result
+		return result
 
-
+	def new_track(self,*args, **kwargs):
+		self.get_tracks(self)
+		self.track_index+=1
+		logging.info("creating new track %s" %self.track_index)
+		self.proc_cmd('tnew {}'.format('Track_%s'%self.track_index))
+		
+	def select_track(self,*args):
+		self.current_track=self.track_list[args[0]]
+		self.proc_cmd("ct %s"%self.current_track)
+	
+	def set_pos(self,*args):
+		self.proc_cmd("g %s"%args[0])
+	
 	def pause(self,*args):
 		self.proc_cmd("i")
 
 	def play(self,*args):
 		self.proc_cmd("p")
+		
+	def stop(self,*args):
+		self.proc_cmd("s")
 
 #******************************************************************************

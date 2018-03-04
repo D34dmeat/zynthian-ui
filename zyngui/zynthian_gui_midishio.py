@@ -57,14 +57,18 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 	def __init__(self):
 		self.clientno=None
 		self.last_action=None
+		self.mode='io'
 		self.jclient=jack.Client("midish_ioselect")
 		super().__init__('Preset', True)
       
+	def set_mode(self):
+		return 'track_9'
+	
 	def fill_list(self):
 		#zynthian_gui_config.zyngui.curlayer.load_io_list()
-		self.list_data.append(('di',0,self.get_seq_info()))
+		#self.list_data.append(('di',0,self.get_seq_info()))
 		res=[]
-		cmd="aseqdump -l"
+		#cmd="aseqdump -l"
 		i=0
 		#output=check_output("a2jmidi_bridge midish", shell=True)
 		
@@ -75,22 +79,22 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		#lines=output.decode('utf8').split('\n')
 		#for line in output:
 		#	logging.info("output =8> %s" %line)
-		cmd="aseqdump -l"
+		# cmd="aseqdump -l"
 
-		output=check_output(cmd, shell=True)
-		lines=output.decode('utf8').split('\n')
-		for f in lines:
-			title=str.replace(f, '_', ' ')
-			res.append((f,i,title))
-			i=i+1
+		# output=check_output(cmd, shell=True)
+		# lines=output.decode('utf8').split('\n')
+		# for f in lines:
+			# title=str.replace(f, '_', ' ')
+			# res.append((f,i,title))
+			# i=i+1
 
-		#self.list_data=res
-		hw_out=self.jclient.get_ports() + self.get_seq_info()
+		#self.list_data=res self.jclient.get_ports()
+		hw_out=self.get_seq_info()
 		#self.list_data.append(('di',0,self.get_seq_info()))
 		
 		for f,hw in enumerate(hw_out):
 			title=str(hw.name)#.split(':')[0]
-			res.append((self.set_select_path,i,title))
+			res.append((self.set_output,i,title))
 			i=i+1
 
 		self.list_data=res
@@ -108,17 +112,26 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 	def select_action(self, i):
 		if zynthian_gui_config.zyngui.curlayer.engine.nickname=='MS':
 		#	zynthian_gui_config.zyngui.show_screen('info')
-			zynthian_gui_config.zyngui.show_info('info what the %s' %self.list_data[i][0], 910)
+			zynthian_gui_config.zyngui.show_info('info what the %s' %self.list_data[i][0], 1910)
 			self.last_action=self.list_data[i][0]
 			self.last_action()
 
 		else:
-			zynthian_gui_config.zyngui.curlayer.set_preset(i)
+			#zynthian_gui_config.zyngui.curlayer.set_preset(i)
 			zynthian_gui_config.zyngui.show_screen('seqcontrol')
 
 	def set_select_path(self):
 		self.select_path.set("Select io")
 
+	def set_output(self):
+		self.jclient.activate()
+		logging.info("connections to input %s chosen: %s"%(self.list_data[self.index][2] , str(self.jclient.get_all_connections(self.list_data[self.index][2]))))
+		self.jclient.connect('midish_output:playback', self.list_data[self.index][2])
+		#zynthian_gui_config.zyngui.curlayer.engine.set_output(arg)	
+		self.jclient.deactivate()
+		self.jclient.close()
+
+		
 	def set_start(self):
 		zynthian_gui_config.zyngui.show_screen('seqcontrol')	
 
@@ -141,18 +154,19 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		#	alsaseq.client('sequencer',1,1,False)
 		#	self.clientno=alsaseq.id()
 		#logging.info("port:  %3d    %s" %(alsaseq.id(), alsaseq.status()))
-		hw_out=self.jclient.get_ports(is_output=True, is_physical=True, is_midi=True)
+		#hw_out=self.jclient.get_ports(is_output=True, is_physical=True, is_midi=True)
+		hw_out=self.jclient.get_ports(is_midi=True)
 		if len(hw_out)==0:
 			hw_out=[]
 		#Add MIDI-IN (ttymidi) device ...
-		ttymidi_out=self.jclient.get_ports("ttymidi", is_output=True, is_physical=False, is_midi=True)
-		try:
-			hw_out.append(ttymidi_out[0])
-		except:
-			pass
+		# ttymidi_out=self.jclient.get_ports("ttymidi", is_output=True, is_physical=False, is_midi=True)
+		# try:
+			# hw_out.append(ttymidi_out[0])
+		# except:
+			# pass
 
 		logging.info("Physical Devices: " + str(hw_out))
-		
+		list=hw_out
 		return list
 
 	#def set_select_path(self):
