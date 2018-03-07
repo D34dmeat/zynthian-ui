@@ -46,10 +46,8 @@ engine_list = [
 	"zynaddsubfx",
 	"fluidsynth",
 	"LinuxSampler",
-	"midish_in",
-	"setBfree"
+	"setBfree"]
 	#"mod-host"
-]
 
 #Input Black List
 hw_black_list = [
@@ -125,7 +123,7 @@ def midi_autoconnect():
 			dev=devs[0]
 			if dev.shortname=='osc':
 				dev=devs[1]
-			#logger.debug("Engine "+str(dev)+" found")
+			logger.debug("Engine "+str(dev)+" found")
 			engines.append(dev)
 		except:
 			#logger.warning("Engine "+str(devs[0])+" is not present")
@@ -136,6 +134,33 @@ def midi_autoconnect():
 	#Get Zynthian Controller device
 	zyncoder_out=jclient.get_ports("Zyncoder", is_output=True, is_midi=True)
 	zyncoder_in=jclient.get_ports("Zyncoder", is_input=True, is_midi=True)
+    
+    #Get Midish inputs and outputs
+	midish_out=jclient.get_ports("midish_out", is_output=True, is_midi=True)
+	midish_in=jclient.get_ports("midish_in", is_input=True, is_midi=True)
+	
+	# info field
+	# if len(midish_in)>0:
+		# logger.error("Connections  "+str(jclient.get_all_connections(midish_out[0]))+" => "+str(jclient.get_all_connections(zyncoder_in[0])))
+
+    #Connect Physical devices to midish
+	for hw in hw_out:
+		if len(midish_in)>0:
+			
+			#logger.error("Connecting HW "+str(hw)+" => "+str(midish_in[0]))
+			try:
+				jclient.connect(hw,midish_in[0])
+			except:
+				pass
+
+	# Connect midish to zyncoder
+	if len(zyncoder_in)>0 and len(midish_in)>0:
+			if len(jclient.get_all_connections(midish_out[0]))<1:
+				try:
+					jclient.connect(midish_out[0],zyncoder_in[0])
+				except Exception as err:
+					logger.error("ERROR Autoconnecting: "+str(midish_out)+str(err))
+
 
 	#Connect Physical devices to Synth Engines and Zyncoder
 	for hw in hw_out:
@@ -156,6 +181,14 @@ def midi_autoconnect():
 					pass
 			'''
 
+	#Connect midish to engines
+	if len(midish_out)>0:
+		for engine in engines:
+			try:
+				jclient.connect(midish_out[0],engine)
+			except:
+				pass
+	
 	#Connect Zyncoder to engines
 	if len(zyncoder_out)>0:
 		for engine in engines:

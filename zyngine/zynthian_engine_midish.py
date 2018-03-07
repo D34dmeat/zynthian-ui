@@ -29,7 +29,7 @@ import logging
 import alsaseq
 from . import zynthian_engine
 from . import zynthian_controller
-from tkinter import StringVar
+from tkinter import StringVar, BooleanVar, IntVar
 #import zynthian_gui_config
 
 
@@ -64,6 +64,8 @@ class zynthian_engine_midish(zynthian_engine):
 		]
 		self.song_pos=[]
 		self.pos_label=StringVar()
+		self.play_rec=BooleanVar()
+		self.play_rec.set(False)
 		self.current_track=None
 		self.track_list=[]
 		self.track_index=0
@@ -342,8 +344,10 @@ class zynthian_engine_midish(zynthian_engine):
 			#logging.info("output =8> %s" %result)
 
 			self.proc_cmd(
-				'dnew 0 "midish_in" ro\n'.format(midich, layer.part_i, self.alsaid))
-			self.proc_cmd('dnew 1 "midish_out" wo\n')
+				'dnew 1 "midish_in" ro\n'.format(midich, layer.part_i, self.alsaid))
+			self.proc_cmd('dnew 0 "midish_out" wo\n')
+			self.proc_cmd('fnew mypiano')
+			self.proc_cmd('fmap {any {0 1}} {any {1 1}}')
 			self.proc_cmd("print [igetd]")
 			self.proc_cmd("dinfo 0")
 			self.proc_cmd("dinfo 1")
@@ -353,6 +357,7 @@ class zynthian_engine_midish(zynthian_engine):
 			self.proc_cmd("print [iexists keyboard]")
 			self.proc_cmd("geti")
 			self.proc_cmd("geto")
+			self.proc_cmd("print [flist]")
 			self.proc_cmd("print [oexists output]")
 			self.proc_cmd("getf")
 
@@ -437,7 +442,7 @@ class zynthian_engine_midish(zynthian_engine):
 		return result
 
 	def new_track(self,*args, **kwargs):
-		self.get_tracks(self)
+		tracks=self.get_tracks(self)
 		self.track_index+=1
 		logging.info("creating new track %s" %self.track_index)
 		self.proc_cmd('tnew {}'.format('Track_%s'%self.track_index))
@@ -445,6 +450,9 @@ class zynthian_engine_midish(zynthian_engine):
 	def select_track(self,*args):
 		self.current_track=self.track_list[args[0]]
 		self.proc_cmd("ct %s"%self.current_track)
+		# track filter info
+		self.proc_cmd("tgetf")
+		self.proc_cmd("finfo")
 	
 	def set_pos(self,*args):
 		self.proc_cmd("g %s"%args[0])
@@ -460,11 +468,18 @@ class zynthian_engine_midish(zynthian_engine):
 		
 	def pause(self,*args):
 		self.proc_cmd("i")
+		self.play_rec.set(False)
 
 	def play(self,*args):
-		self.proc_cmd("p")
+		if self.play_rec.get():
+			self.play_rec.set(False)
+			self.proc_cmd("i")
+		else:
+			self.play_rec.set(True)
+			self.proc_cmd("p")
 		
 	def stop(self,*args):
 		self.proc_cmd("s")
+		self.play_rec.set(False)
 
 #******************************************************************************

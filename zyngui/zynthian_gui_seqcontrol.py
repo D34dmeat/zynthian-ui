@@ -390,7 +390,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			fg=zynthian_gui_config.color_panel_tx,
 			activebackground=zynthian_gui_config.color_ctrl_bg_on,
 			font=zynthian_gui_config.font_listbox,
-			relief = 'groove',text = "play", command = self.play)	
+			relief = 'groove',text = "play", command = zynthian_gui_config.zyngui.curlayer.engine.play)	
 			
 		self.rec = tkinter.Button(self.ctrlbar,
 			bg=zynthian_gui_config.color_panel_bg,
