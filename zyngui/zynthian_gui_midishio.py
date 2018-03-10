@@ -56,13 +56,19 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 
 	def __init__(self):
 		self.clientno=None
+		self.current_track=''
 		self.last_action=None
-		self.mode='io'
+		self.mode=''
 		self.jclient=jack.Client("midish_ioselect")
 		super().__init__('Preset', True)
       
 	def set_mode(self):
-		return 'track_9'
+		self.mode=zynthian_gui_config.zyngui.curlayer.engine.settings
+		#return 'track_9'
+	
+	def get_mode(self):
+		self.mode=zynthian_gui_config.zyngui.curlayer.engine.settings
+		return self.mode
 	
 	def fill_list(self):
 		#zynthian_gui_config.zyngui.curlayer.load_io_list()
@@ -89,15 +95,27 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 			# i=i+1
 
 		#self.list_data=res self.jclient.get_ports()
-		hw_out=self.get_seq_info()
+		#hw_out=self.get_seq_info()
 		#self.list_data.append(('di',0,self.get_seq_info()))
 		
-		for f,hw in enumerate(hw_out):
-			title=str(hw.name)#.split(':')[0]
-			res.append((self.set_output,i,title))
-			i=i+1
+		# for f,hw in enumerate(hw_out):
+			# title=str(hw.name)#.split(':')[0]
+			# res.append((self.set_output,i,title))
+			# i=i+1
 
 		self.list_data=res
+		
+		logging.info("mode of operadus %s" %self.get_mode())
+		self.current_track=zynthian_gui_config.zyngui.curlayer.engine.current_track
+		#track info
+		if self.mode =='track':
+		
+			logging.info("output =8> %s" %self.current_track)
+			self.list_data.append((self.set_select_path,0,self.current_track))
+			self.tinfo=zynthian_gui_config.zyngui.curlayer.engine.get_trackinfo(tname=self.current_track)
+			self.list_data.append((self.set_select_path,0,self.tinfo['fname']))
+			for line in self.tinfo['filtero']:
+				self.list_data.append((self.set_select_path,0,line))
 		#self.list_data.append(hw_out)
 		self.list_data.append((self.set_select_path,0,"path"))
 		self.list_data.append((self.set_start,0,"start"))
@@ -121,7 +139,11 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 			zynthian_gui_config.zyngui.show_screen('seqcontrol')
 
 	def set_select_path(self):
-		self.select_path.set("Select io")
+		msg='midish'
+		if self.mode =='track':
+			msg='Track '+self.current_track
+		
+		self.select_path.set("Options for {}".format(msg))
 
 	def set_output(self):
 		self.jclient.activate()
@@ -131,6 +153,9 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		self.jclient.deactivate()
 		self.jclient.close()
 
+	def filter_rules(self, rules):
+		for rule in rules.split(' '):
+			logging.info("rule %s" %rule)
 		
 	def set_start(self):
 		zynthian_gui_config.zyngui.show_screen('seqcontrol')	

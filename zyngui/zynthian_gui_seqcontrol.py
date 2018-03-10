@@ -191,9 +191,10 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		elif self.index==self.selected_track:
 			zynthian_gui_config.zyngui.show_modal('midishio')
 		else:
+			self.selected_track=self.index
 			iq=self.index-1
 			zynthian_gui_config.zyngui.curlayer.engine.select_track(iq)
-			logging.debug("selecting screen %d => %s" % (iq,zynthian_gui_config.zyngui.curlayer.engine.track_list[iq]))
+			logging.debug("selecting track %d => %s" % (iq,zynthian_gui_config.zyngui.curlayer.engine.track_list[iq]))
 		#zynthian_gui_config.zyngui.curlayer.set_active_screen_index(self.index)
 		#self.zcontrollers=zynthian_gui_config.zyngui.curlayer.get_active_screen()
 		#Setup GUI Controllers

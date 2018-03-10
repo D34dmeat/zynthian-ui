@@ -57,7 +57,7 @@ class zynthian_engine_midish(zynthian_engine):
 		self.name="Midish"
 		self.nickname="MS"
 		self.command=("/usr/local/bin/midish", "-v")
-
+		self.settings='track'
 		self.media_dirs=[
 			('_', os.getcwd()+"/data/midish/media"),
 			('MY', os.getcwd()+"/my-data/midish/media")
@@ -341,25 +341,27 @@ class zynthian_engine_midish(zynthian_engine):
 			#lines=self.proc_get_lines()
 			#for line in self.queue:
 			#	logging.info("output =8> %s" %line)
-			#logging.info("output =8> %s" %result)
+			#logging.info("output =8> %s" %result).format(midich, layer.part_i, self.alsaid)
+			in_nr=1
+			out_nr=0
 
 			self.proc_cmd(
-				'dnew 1 "midish_in" ro\n'.format(midich, layer.part_i, self.alsaid))
-			self.proc_cmd('dnew 0 "midish_out" wo\n')
-			self.proc_cmd('fnew mypiano')
-			self.proc_cmd('fmap {any {0 1}} {any {1 1}}')
+				'dnew %s "midish_in" ro\n' %in_nr)
+			self.proc_cmd('dnew %s "midish_out" wo\n' %out_nr)
+			self.proc_cmd('fnew default')
+			self.proc_cmd('fmap {any {%s 0}} {any {%s 0}}'%(in_nr, out_nr))
 			self.proc_cmd("print [igetd]")
-			self.proc_cmd("dinfo 0")
-			self.proc_cmd("dinfo 1")
-			self.proc_cmd("ls")
-			self.proc_cmd("inew keyboard {0 1}")
-			self.proc_cmd("onew output {1 1}")
-			self.proc_cmd("print [iexists keyboard]")
-			self.proc_cmd("geti")
-			self.proc_cmd("geto")
-			self.proc_cmd("print [flist]")
-			self.proc_cmd("print [oexists output]")
-			self.proc_cmd("getf")
+			#self.proc_cmd("dinfo 0")
+			#self.proc_cmd("dinfo 1")
+			#self.proc_cmd("ls")
+			#self.proc_cmd("inew keyboard {%s 0}"%in_nr)
+			#self.proc_cmd("onew output {%s 0}"%out_nr)
+			# self.proc_cmd("print [iexists keyboard]")
+			# self.proc_cmd("geti")
+			# self.proc_cmd("geto")
+			# self.proc_cmd("print [flist]")
+			# self.proc_cmd("print [oexists output]")
+			# self.proc_cmd("getf")
 
 			#self.proc_cmd("i")
 			#self.proc_cmd('load "{0}"'.format("/zynthian/zynthian-ui/data/midish/media/songs/" + "sample.sng"))
@@ -388,10 +390,11 @@ class zynthian_engine_midish(zynthian_engine):
 				self.proc.stdin.flush()
 				out=self.proc_get_lines(tout)
 				lines=[]
+				
 				for line in out:
 					line.replace('\n', '')
 					lines.append(line)
-				logging.debug("proc output:\n%s" % (lines))
+				logging.debug("proc output:\n %s" % (lines))
 			except Exception as err:
 				out=""
 				logging.error("Can't exec engine command: %s => %s" % (cmd,err))
@@ -442,10 +445,22 @@ class zynthian_engine_midish(zynthian_engine):
 		return result
 
 	def new_track(self,*args, **kwargs):
+		in_nr=1
+		out_nr=0
 		tracks=self.get_tracks(self)
-		self.track_index+=1
-		logging.info("creating new track %s" %self.track_index)
-		self.proc_cmd('tnew {}'.format('Track_%s'%self.track_index))
+		logging.info("get tracks return %s length %s" %(tracks,len(tracks[0])))
+		if len(tracks[0])<1:
+			self.track_index=0
+		self.track_index+=1	
+		if 'tname' in kwargs:
+			trackname=kwargs['tname']
+		else:
+			trackname="Track_"+str(self.track_index)
+		logging.info("creating new track %s" %trackname)
+		self.proc_cmd('fnew {}'.format(trackname))
+		self.proc_cmd('fmap {any {%s 0}} {any {%s %s}}'%(in_nr, out_nr, self.track_index-1))
+		self.proc_cmd('tnew {}'.format(trackname))
+		
 		
 	def select_track(self,*args):
 		self.current_track=self.track_list[args[0]]
@@ -453,6 +468,15 @@ class zynthian_engine_midish(zynthian_engine):
 		# track filter info
 		self.proc_cmd("tgetf")
 		self.proc_cmd("finfo")
+		
+	def get_trackinfo(self, *args, **kwargs):
+		info={'tname':kwargs['tname']}
+		res=self.proc_cmd("tgetf")
+		info['fname'] = res[0]
+		res=self.proc_cmd("finfo")
+		info['filtero'] = res
+		
+		return info
 	
 	def set_pos(self,*args):
 		self.proc_cmd("g %s"%args[0])
