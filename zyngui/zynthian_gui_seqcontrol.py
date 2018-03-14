@@ -55,14 +55,17 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 	ctrl_screens={}
 	zcontrollers=[]
 	screen_name=None
+	
 
 	zgui_controllers=[]
 	zgui_controllers_map={}
 
 	def __init__(self):
-		super().__init__('Controllers',False)
+		super().__init__('Controllers',True)
+		#self.lb_height=(zynthian_gui_config.display_height-zynthian_gui_config.topbar_height)-zynthian_gui_config.ctrl_height
 		# Create Lock object to avoid concurrence problems
 		self.lock=Lock();
+		self.end=0
 		self.selected_track=0
 		self.playing=False
 		# Create "pusher" canvas => used in mode "select"
@@ -81,31 +84,51 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			highlightthickness=0,
 			relief='flat',
 			bg = zynthian_gui_config.color_bg)
+		self.tbar=None
+		self.secselect=False
 		self.song_pos=tkinter.StringVar()
 	
 	def transport_drag(self, event):
 		canvas = event.widget
+		canvasw=zynthian_gui_config.display_width-2#canvas.winfo_width()
+		
+		
 		x1, y1 = ( event.x - 1 ), ( event.y - 1 )
-		canvas.coords('tbar', 0, 25, x1, 75)
-		x = canvas.canvasx(event.x)
-		y = canvas.canvasy(event.y)
+		pos= round(self.end*(x1/canvasw))
+		self.update_transport(pos)
+		# canvas.coords('tbar', 0, 25, x1, 75)
+		# if x1<(canvasw-30):
+			# tp=x1
+		# else:
+			# tp=canvasw-30
+		# canvas.coords('tbar_pos', tp, 0)
+		# canvas.itemconfig('tbar_pos', text="Bar "+str(pos))
+		#x = canvas.canvasx(event.x)
+		#y = canvas.canvasy(event.y)
 		#print canvas.find_closest(x, y)
 	
 	def transport_release(self, event):
 		x1, y1 = ( event.x - 1 ), ( event.y - 1 )
-		end=zynthian_gui_config.zyngui.curlayer.engine.get_end()
+		#self.end=zynthian_gui_config.zyngui.curlayer.engine.get_end()
 		
 		canvas = event.widget
 		canvasw=canvas.winfo_width()
 		logging.debug("math canvas %s" % canvasw)
+		logging.debug("math canvas %s" % zynthian_gui_config.display_width)
 		logging.debug("math x1 %s" % x1)
-		logging.debug("math end %s" % end)
-		canvas.coords('tbar', 0, 25, x1, 75)
-		pos= round(end*(x1/canvasw))
+		logging.debug("math end %s" % self.end)
+		#canvas.coords('tbar', 0, 25, x1, 75)
+		#if x1<(canvasw-30):
+			#tp=x1
+		#else:
+			#tp=canvasw-30
+		#canvas.coords('tbar_pos', tp, 0)
+		
+		pos= round(self.end*(x1/canvasw))
+		self.update_transport(pos)
 		zynthian_gui_config.zyngui.curlayer.engine.set_pos(pos)
-		x = canvas.canvasx(event.x)
-		y = canvas.canvasy(event.y)
-		#print canvas.find_closest(x, y)	
+		#canvas.itemconfig('tbar_pos', text="Bar "+str(pos))
+			
 
 	def rec(self):
 		if self.playing:
@@ -140,20 +163,22 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		
 	
 	def show_tracks(self):
-		from tkinter import messagebox
-		tracks_list=zynthian_gui_config.zyngui.curlayer.engine.get_tracks()
-		for track in tracks_list:
-			track=str.replace(track, '{', '')
-			track=str.replace(track, '}', '')
-			track=track.replace('\n', '')
-			track=track.split(' ')
-		msg = messagebox.showinfo( "tracks list", "%s" %tracks_list)
+		# from tkinter import messagebox
+		# tracks_list=zynthian_gui_config.zyngui.curlayer.engine.get_tracks()
+		# for track in tracks_list:
+			# track=str.replace(track, '{', '')
+			# track=str.replace(track, '}', '')
+			# track=track.replace('\n', '')
+			# track=track.split(' ')
+		# msg = messagebox.showinfo( "tracks list", "%s" %tracks_list)
+		zynthian_gui_config.zyngui.curlayer.engine.settings='settings'
 		zynthian_gui_config.zyngui.show_modal('midishio')
 
 	def show(self):
 		self.lb_frame.height=self.lb_height-zynthian_gui_config.ctrl_height
 		self.build_ctrls()
 		super().show()
+		
 		
 		#self.click_listbox()
 
@@ -356,9 +381,17 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		if zynthian_gui_config.zyngui.curlayer:
 			self.select_path.set("midish sequencer" + zynthian_gui_config.zyngui.curlayer.get_presetpath())
 			
+	def loop(self):
+		pass
 	
+	def select_part(self):
+		if self.secselect:
+			self.secselect=False
+		else:
+			self.secselect=True
+		
 	
-	
+
 	def build_ctrls(self):
 		# control bar
 		
@@ -372,7 +405,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			width = 9,
 			bg=zynthian_gui_config.color_panel_bg,
 			fg=zynthian_gui_config.color_panel_tx,)
-		self.pos_indicator.grid(row=0, column=0, padx=(0,2), sticky="w")
+		#self.pos_indicator.grid(row=0, column=0, padx=(0,2), sticky="w")
 		#self.pos_indicator.place(x = zynthian_gui_config.ctrl_width+5,y = zynthian_gui_config.ctrl_height+(zynthian_gui_config.ctrl_height/2))
 		
 		# buttons
@@ -407,28 +440,97 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			font=zynthian_gui_config.font_listbox,
 			relief = 'groove', text = "pause", command = zynthian_gui_config.zyngui.curlayer.engine.pause)
 		
-		e = tkinter.Button(self.ctrlbar,
+		settings = tkinter.Button(self.ctrlbar,
 			bg=zynthian_gui_config.color_panel_bg,
 			fg=zynthian_gui_config.color_panel_tx,
 			activebackground=zynthian_gui_config.color_ctrl_bg_on,
 			font=zynthian_gui_config.font_listbox,
-			relief = 'groove', text = "show tracks", command = self.show_tracks)
+			relief = 'groove', text = "Settings", command = self.show_tracks)
+		
+		loop = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove', text = "loop", command = self.loop)
+		
+		buttselect = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove', text = "select", command = self.select_part)
 			
+		save = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove', text = "Save", command = zynthian_gui_config.zyngui.curlayer.engine.save)
+
+		load = tkinter.Button(self.ctrlbar,
+			bg=zynthian_gui_config.color_panel_bg,
+			fg=zynthian_gui_config.color_panel_tx,
+			activebackground=zynthian_gui_config.color_ctrl_bg_on,
+			font=zynthian_gui_config.font_listbox,
+			relief = 'groove', text = "Load", command = zynthian_gui_config.zyngui.curlayer.engine.load)
+					
+		# the transport bar	canvas
 		transport = tkinter.Canvas(self.ctrlbar, width=zynthian_gui_config.display_width-2, height=79,
 			bg=zynthian_gui_config.color_panel_bg,
 			#fg=zynthian_gui_config.color_panel_tx,
 			relief = 'groove')
 		transport.grid(row=2, column=0, columnspan=9, padx=(0,2), sticky="we")	
+		
+		# transport bar
 		tbar = transport.create_rectangle(2, 2, 2, 75, fill="blue", tags=('tbar'))
 		transport.bind( "<B1-Motion>", self.transport_drag )
 		transport.bind( "<ButtonRelease-1>", self.transport_release )
+
+		# select transport bar
+		sbar = transport.create_rectangle(2, 2, 2, 75, fill="green", tags=('sbar'))
+		transport.bind( "<B1-Motion>", self.transport_drag )
+		transport.bind( "<ButtonRelease-1>", self.transport_release )
+		
+		
+		# transport pos text
+		tbar_pos = transport.create_text(2, 2, fill="white",
+			anchor="nw", 
+			text = "Bar "+zynthian_gui_config.zyngui.curlayer.engine.song_pos[0], 
+			tags=('tbar_pos'))
+		self.tbar=transport
 		
 		stop.grid(row=1, column=1, padx=(0,2), sticky="w")
 		self.play.grid(row=1, column=2, padx=(0,2), sticky="w")
 		self.rec.grid(row=1, column=3, padx=(0,2), sticky="w")
 		pause.grid(row=1, column=4, padx=(0,2), sticky="w")
-		e.grid(row=1, column=5, padx=(0,2), sticky="w")
+		settings.grid(row=1, column=5, padx=(0,2), sticky="w")
+		loop.grid(row=1, column=6, padx=(0,2), sticky="w")
+		buttselect.grid(row=0, column=6, padx=(0,2), sticky="w")
+		save.grid(row=0, column=5, padx=(0,2), sticky="w")
+		load.grid(row=0, column=4, padx=(0,2), sticky="w")
+		self.pos_indicator.grid(row=0, column=0, padx=(0,2), sticky="w")
+
+	def update_songlength(self,end):
+		self.end=end
 		
+		
+	def update_transport(self, args):
+		canvasw=zynthian_gui_config.display_width-2
+		if self.end<1:
+			#self.end=zynthian_gui_config.zyngui.curlayer.engine.get_end()
+			# if self.end<1:
+			self.end=1
+		if self.tbar != None:
+			#logging.debug("update transport to => %s" % args)
+			x1=args*(canvasw/self.end)
+			self.tbar.coords('tbar', 0, 10, x1, self.tbar.winfo_height()-2)
+			if x1<(canvasw-50):
+				tp=x1
+			else:
+				tp=canvasw-50
+			self.tbar.coords('tbar_pos', tp, 0)
+			self.tbar.itemconfig('tbar_pos', text="Bar "+str(args))
 		#d.place(x = zynthian_gui_config.ctrl_width+5,y = zynthian_gui_config.ctrl_height+150)
 		#c.place(x = zynthian_gui_config.ctrl_width+50,y = zynthian_gui_config.ctrl_height+150)
 		#B.place(x = zynthian_gui_config.ctrl_width+150,y = zynthian_gui_config.ctrl_height+150)

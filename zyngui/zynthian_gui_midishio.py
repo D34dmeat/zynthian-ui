@@ -116,13 +116,23 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 			self.list_data.append((self.set_select_path,0,self.tinfo['fname']))
 			for line in self.tinfo['filtero']:
 				self.list_data.append((self.set_select_path,0,line))
+				
+		if self.mode =='settings':
+			for option in self.get_options():
+				self.list_data.append((self.set_select_path,0,option))
 		#self.list_data.append(hw_out)
-		self.list_data.append((self.set_select_path,0,"path"))
-		self.list_data.append((self.set_start,0,"start"))
+		self.list_data.append((self.set_select_path,0,"empty"))
+		#self.list_data.append((self.set_start,0,"start"))
 
 		#check_output('aseqdump -l/n', shell=True).decode('utf-8','ignore')
 		super().fill_list()
 
+	def get_options(self):
+		options=[]
+		options.append("Current Bpm: %s"%zynthian_gui_config.zyngui.curlayer.engine.get_bpm())
+		return options
+	
+	
 	def show(self):
 		self.index=zynthian_gui_config.zyngui.curlayer.get_preset_index()
 		super().show()
@@ -156,7 +166,21 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 	def filter_rules(self, rules):
 		for rule in rules.split(' '):
 			logging.info("rule %s" %rule)
-		
+	
+	def cb_listbox_motion(self,event):
+		if self.mode=='select':
+			super().cb_listbox_motion(event)
+		else:
+			dts=(datetime.now()-self.listbox_push_ts).total_seconds()
+			if dts>0.1:
+				index=self.get_cursel()
+				if index!=self.index:
+					#logging.debug("LISTBOX MOTION => %d" % self.index)
+					zynthian_gui_config.zyngui.start_loading()
+					#self.select_listbox(self.get_cursel())
+					zynthian_gui_config.zyngui.stop_loading()
+					sleep(0.04)	
+	
 	def set_start(self):
 		zynthian_gui_config.zyngui.show_screen('seqcontrol')	
 

@@ -153,14 +153,15 @@ def midi_autoconnect():
 			except:
 				pass
 
-	# Connect midish to zyncoder
-	#if len(zyncoder_in)>0 and len(midish_in)>0:
-			#if len(jclient.get_all_connections(midish_out[0]))<1:
-				#try:
-					#jclient.connect(midish_out[0],zyncoder_in[0])
-				#except Exception as err:
-					#logger.error("ERROR Autoconnecting: "+str(midish_out)+str(err))
-
+	# Connect midish to zyncoder only confuses things
+	'''
+	if len(zyncoder_in)>0 and len(midish_in)>0:
+			if len(jclient.get_all_connections(midish_out[0]))<1:
+				try:
+					jclient.connect(midish_out[0],zyncoder_in[0])
+				except Exception as err:
+					logger.error("ERROR Autoconnecting: "+str(midish_out)+str(err))
+	'''
 
 	#Connect Physical devices to Synth Engines and Zyncoder
 	for hw in hw_out:
@@ -181,7 +182,7 @@ def midi_autoconnect():
 					pass
 			'''
 
-	#Connect midish to engines
+	#Connect Midish to engines
 	if len(midish_out)>0:
 		for engine in engines:
 			try:

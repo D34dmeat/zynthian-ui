@@ -26,10 +26,10 @@ import os
 import re
 import copy
 import logging
-import alsaseq
+#import alsaseq
 from . import zynthian_engine
 from . import zynthian_controller
-from tkinter import StringVar, BooleanVar, IntVar
+from tkinter import StringVar, BooleanVar, IntVar, Tk
 #import zynthian_gui_config
 
 
@@ -47,7 +47,7 @@ class zynthian_engine_midish(zynthian_engine):
 	_ctrl_screens=[
 		['track1',['volume','expression','pan','sustain']]
 	]
-
+	ready=False
 	# ---------------------------------------------------------------------------
 	# Initialization
 	# ---------------------------------------------------------------------------
@@ -62,7 +62,9 @@ class zynthian_engine_midish(zynthian_engine):
 			('_', os.getcwd()+"/data/midish/media"),
 			('MY', os.getcwd()+"/my-data/midish/media")
 		]
+		self.stop_at_end=False
 		self.song_pos=[]
+		self.song_lenght=0
 		self.pos_label=StringVar()
 		self.play_rec=BooleanVar()
 		self.play_rec.set(False)
@@ -71,14 +73,14 @@ class zynthian_engine_midish(zynthian_engine):
 		self.track_index=0
 		self.current_filter=None
 		self.alsaid=None
+		self.tbar=None
+		#self.ready=False
+		
+		# start the a2j and j2a bridge connecting it to the blank midish ports
 		os.system("a2jmidi_bridge midish_out &")
-		#for line in output:
-		#	logging.info("output =8> %s" %line[0])
+		
 		os.system("j2amidi_bridge midish_in &")
-		#output=self.get_cmdlist("j2amidi_bridge midish_in &")
-		#for line in output:
-		#	logging.info("output =8> %s" %line[0])
-
+		
 
 		self.start(True)
 		self.reset()
@@ -334,6 +336,7 @@ class zynthian_engine_midish(zynthian_engine):
 	def set_layer_midi_routes(self, layer):
 		if layer.part_i is not None:
 			midich=layer.get_midi_chan()
+			logging.info("selected midichannel :-> %s" %midich)
 			#alsaseq.client('sequencer', 1, 1, False)
 			#self.alsaid=alsaseq.id()
 			#result=self.get_io_list()
@@ -350,7 +353,7 @@ class zynthian_engine_midish(zynthian_engine):
 			self.proc_cmd('dnew %s "midish_out" wo\n' %out_nr)
 			self.proc_cmd('fnew default')
 			self.proc_cmd('fmap {any {%s 0}} {any {%s 0}}'%(in_nr, out_nr))
-			self.proc_cmd("print [igetd]")
+			#self.proc_cmd("print [igetd]")
 			#self.proc_cmd("dinfo 0")
 			#self.proc_cmd("dinfo 1")
 			#self.proc_cmd("ls")
@@ -362,6 +365,7 @@ class zynthian_engine_midish(zynthian_engine):
 			# self.proc_cmd("print [flist]")
 			# self.proc_cmd("print [oexists output]")
 			# self.proc_cmd("getf")
+			self.update_song_length()
 
 			#self.proc_cmd("i")
 			#self.proc_cmd('load "{0}"'.format("/zynthian/zynthian-ui/data/midish/media/songs/" + "sample.sng"))
@@ -383,6 +387,7 @@ class zynthian_engine_midish(zynthian_engine):
 		
 		if self.proc:
 			self.start_loading()
+			self.ready=False
 			try:
 				logging.debug("proc command midish: "+cmd)
 				#self.proc.stdin.write(bytes(cmd + "\n", 'UTF-8'))
@@ -392,7 +397,7 @@ class zynthian_engine_midish(zynthian_engine):
 				lines=[]
 				
 				for line in out:
-					line.replace('\n', '')
+					line=line.replace('\n', '')
 					lines.append(line)
 				logging.debug("proc output:\n %s" % (lines))
 			except Exception as err:
@@ -405,10 +410,22 @@ class zynthian_engine_midish(zynthian_engine):
 
 	def que_callback(self, line):
 		if line[0] == '+':
-			logging.debug("found a + line: %s" % line)
+			#logging.debug("found a + line: %s" % line)
 			if line[0:4] == '+pos':
 				self.song_pos=line.replace('+pos', '').split()
 				self.pos_label.set(str(self.song_pos))
+				if self.zyngui.active_screen=='seqcontrol':
+					self.zyngui.screens['seqcontrol'].update_transport(int(self.song_pos[0]))
+				
+			if line[0:9] == '+complete':
+				logging.debug("found a + line: %s" % line)
+				if self.stop_at_end:
+					self.stop()
+			if line[0:6] == '+ready':
+				logging.debug("found a + line: %s" % line)
+				#self.ready=True
+				
+					
 			return False
 		else:
 			return True
@@ -423,13 +440,27 @@ class zynthian_engine_midish(zynthian_engine):
 		except:
 			logging.info("Finished queue thread")
 
+# Midish commands
+#--------
+    
+  
+    	
+    	
+	def update_song_length(self,*args):
+		end=self.get_end()
+		self.song_lenght=end
+		if self.zyngui.active_screen=='seqcontrol':
+			self.zyngui.screens['seqcontrol'].end=end
+		
 	def rec(self,*args):
 		self.proc_cmd("r")
-		logging.info("output 8=> processing command rec")
+		self.play_rec.set(True)
+		#logging.info("output 8=> processing command rec")
 
 	def get_tracks(self,*args):
 		tracks=self.proc_cmd('print [tlist]')
 		result=[]
+		logging.info("output =8> processing command print tlist %s" %tracks)
 		for line in tracks:
 			line=str.replace(line, '{', '')
 			line=str.replace(line, '}', '')
@@ -442,6 +473,7 @@ class zynthian_engine_midish(zynthian_engine):
 					result.append(b)
 		#logging.info("output =8> processing command print tlist %s" %result)
 		self.track_list=result
+		self.update_song_length()
 		return result
 
 	def new_track(self,*args, **kwargs):
@@ -488,11 +520,16 @@ class zynthian_engine_midish(zynthian_engine):
 		
 	def get_end(self,*args):
 		x=[int(i) for i in self.proc_cmd("mend")]
-		return x[len(x)-1]
+		logging.info("result from mend %s" %x)
+		if len(x)>0:
+			return x[len(x)-1]
+		else:
+			return 0
 		
 	def pause(self,*args):
 		self.proc_cmd("i")
 		self.play_rec.set(False)
+		#self.update_song_length()
 
 	def play(self,*args):
 		if self.play_rec.get():
@@ -505,5 +542,45 @@ class zynthian_engine_midish(zynthian_engine):
 	def stop(self,*args):
 		self.proc_cmd("s")
 		self.play_rec.set(False)
+		# self.update_song_length()
 
+	def save(self,*args):
+		self.proc_cmd("save")
+		self.play_rec.set(False)
+		# self.update_song_length()
+	
+	def load(self,*args):
+		self.proc_cmd("load")
+		self.play_rec.set(False)
+		# self.update_song_length()
+			
+	
+		
+	def get_bpm(self,*args):
+		lines=self.proc_cmd("mtempo")
+		bpm=int(lines[0])
+		return bpm
+		
+	def set_bpm(self,*args):
+		lines=self.proc_cmd("t %s"%args)
+		bpm=int(lines[0])
+		return bpm
+		
+
+class filter(object):
+
+	in_dev=None
+	out_dev=None
+	in_midich=0
+	out_midich=0
+	
+	def __init__(self):
+		pass
+		
+	def parse_filter_string(self, string):
+		lines=string
+		
+		return string
+		
+	
 #******************************************************************************
