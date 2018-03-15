@@ -395,7 +395,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 	def build_ctrls(self):
 		# control bar
 		
-		self.ctrlbar.grid(row=2, column=0, rowspan=1, columnspan=3, padx=(0,2), sticky="w")
+		self.ctrlbar.grid(row=2, column=0, rowspan=2, columnspan=3, padx=(0,2), sticky="sw")
 		
 		#song position indicator
 		self.pos_indicator=tkinter.Label( self.ctrlbar,
