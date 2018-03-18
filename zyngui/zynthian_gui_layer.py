@@ -83,7 +83,10 @@ class zynthian_gui_layer(zynthian_gui_selector):
 			zynthian_gui_config.zyngui.set_curlayer(self.curlayer)
 			# If there is an preset selection for the active layer ...
 			if self.curlayer.get_preset_name():
-				zynthian_gui_config.zyngui.show_screen('control')
+				if zynthian_gui_config.zyngui.curlayer.engine.nickname=='MS':
+					zynthian_gui_config.zyngui.show_screen('seqcontrol')
+				else:
+					zynthian_gui_config.zyngui.show_screen('control')
 			else:
 				zynthian_gui_config.zyngui.show_screen('bank')
 				# If there is only one bank, jump to preset selection

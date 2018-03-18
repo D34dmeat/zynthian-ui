@@ -56,6 +56,7 @@ from zyngui.zynthian_gui_preset import zynthian_gui_preset
 from zyngui.zynthian_gui_midishio import zynthian_gui_midishio
 from zyngui.zynthian_gui_control import zynthian_gui_control
 from zyngui.zynthian_gui_seqcontrol import zynthian_gui_seqcontrol
+from zyngui.zynthian_gui_filtermod import zynthian_gui_filtermod
 from zyngui.zynthian_gui_control_xy import zynthian_gui_control_xy
 #from zyngui.zynthian_gui_control_osc_browser import zynthian_gui_osc_browser
 
@@ -131,6 +132,7 @@ class zynthian_gui:
 		self.screens['control']=zynthian_gui_control()
 		self.screens['seqcontrol']=zynthian_gui_seqcontrol()
 		self.screens['control_xy']=zynthian_gui_control_xy()
+		self.screens['filtermod']=zynthian_gui_filtermod()
 		self.screens['midishio']=zynthian_gui_midishio()
 		# Show initial screen => Channel list
 		self.show_screen('layer')

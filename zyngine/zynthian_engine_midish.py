@@ -65,9 +65,20 @@ class zynthian_engine_midish(zynthian_engine):
 		self.stop_at_end=False
 		self.song_pos=[]
 		self.song_lenght=0
+		self.play_rec=StringVar()
+		self.play_rec.set('Stopped')
+		# Infopane label vars
+		self.metr=StringVar()
+		self.metr.set('Metr '+'Rec')
+		self.bpm_mode=StringVar()
+		self.bpm_mode.set("120")
+		self.quant_mode=StringVar()
+		self.quant_mode.set("1/4")
+		self.quant_int=4
+		self.metronome_mode=StringVar()
+		self.metronome_mode.set("4/4")
 		self.pos_label=StringVar()
-		self.play_rec=BooleanVar()
-		self.play_rec.set(False)
+		self.current_selection=[0,1]
 		self.current_track=None
 		self.track_list=[]
 		self.track_index=0
@@ -75,6 +86,7 @@ class zynthian_engine_midish(zynthian_engine):
 		self.alsaid=None
 		self.tbar=None
 		#self.ready=False
+		self.looping=False
 		
 		# start the a2j and j2a bridge connecting it to the blank midish ports
 		os.system("a2jmidi_bridge midish_out &")
@@ -353,6 +365,7 @@ class zynthian_engine_midish(zynthian_engine):
 			self.proc_cmd('dnew %s "midish_out" wo\n' %out_nr)
 			self.proc_cmd('fnew default')
 			self.proc_cmd('fmap {any {%s 0}} {any {%s 0}}'%(in_nr, out_nr))
+			self.metr_set()
 			#self.proc_cmd("print [igetd]")
 			#self.proc_cmd("dinfo 0")
 			#self.proc_cmd("dinfo 1")
@@ -380,9 +393,10 @@ class zynthian_engine_midish(zynthian_engine):
 	def clear_midi_routes(self):
 		self.proc_cmd("reset")
 
-
+#---------------------------------------------------
 		#   sub process
-		
+#------------------------------------------
+
 	def proc_cmd(self, cmd, tout=0.1):
 		
 		if self.proc:
@@ -420,7 +434,16 @@ class zynthian_engine_midish(zynthian_engine):
 			if line[0:9] == '+complete':
 				logging.debug("found a + line: %s" % line)
 				if self.stop_at_end:
-					self.stop()
+					self.stop_playback()
+
+				if self.looping:
+					self.proc_cmd("g %s"%0)
+					if self.play_rec.get()=='Playing':
+						self.proc_cmd("p")
+					elif self.play_rec.get()=='Recording':
+						self.proc_cmd("r")
+						
+						
 			if line[0:6] == '+ready':
 				logging.debug("found a + line: %s" % line)
 				#self.ready=True
@@ -443,7 +466,31 @@ class zynthian_engine_midish(zynthian_engine):
 # Midish commands
 #--------
     
-  
+	def metr_set(self, out=0, midich=9, noteh=48, notel=64):
+		self.proc_cmd('metrocf {non {%s %s} %s 127} {non {%s %s} %s 100}'%(out,midich,noteh,out,midich,notel))
+	
+	def metr_mode(self):
+		metr='Metr '
+		if self.metr.get()==(metr+'Off'):
+			self.metr.set(metr+'On')
+			self.proc_cmd('m on')
+			return
+		elif self.metr.get()==(metr+'On'):
+			self.metr.set(metr+'Rec')
+			self.proc_cmd('m rec')
+			return
+		elif self.metr.get()==(metr+'Rec'):
+			self.metr.set(metr+'Off')
+			self.proc_cmd('m off')
+			
+	
+	def loop(self):
+		if self.looping:
+			self.looping=False
+			return False
+		else:
+			self.looping=True
+			return True
     	
     	
 	def update_song_length(self,*args):
@@ -454,7 +501,7 @@ class zynthian_engine_midish(zynthian_engine):
 		
 	def rec(self,*args):
 		self.proc_cmd("r")
-		self.play_rec.set(True)
+		self.play_rec.set('Recording')
 		#logging.info("output 8=> processing command rec")
 
 	def get_tracks(self,*args):
@@ -474,6 +521,7 @@ class zynthian_engine_midish(zynthian_engine):
 		#logging.info("output =8> processing command print tlist %s" %result)
 		self.track_list=result
 		self.update_song_length()
+		self.bpm_mode.set('Bpm '+str(self.get_bpm()))
 		return result
 
 	def new_track(self,*args, **kwargs):
@@ -498,8 +546,8 @@ class zynthian_engine_midish(zynthian_engine):
 		self.current_track=self.track_list[args[0]]
 		self.proc_cmd("ct %s"%self.current_track)
 		# track filter info
-		self.proc_cmd("tgetf")
-		self.proc_cmd("finfo")
+		#self.proc_cmd("tgetf")
+		#self.proc_cmd("finfo")
 		
 	def get_trackinfo(self, *args, **kwargs):
 		info={'tname':kwargs['tname']}
@@ -509,6 +557,11 @@ class zynthian_engine_midish(zynthian_engine):
 		info['filtero'] = res
 		
 		return info
+		
+	def set_selection(self, pos):
+		self.current_selection[0]=int(self.song_pos[0])
+		self.current_selection[1]=pos
+		logging.info("current selection %s" %self.current_selection)
 	
 	def set_pos(self,*args):
 		self.proc_cmd("g %s"%args[0])
@@ -517,6 +570,7 @@ class zynthian_engine_midish(zynthian_engine):
 	
 	def getpos(self,*args):
 		logging.info("current pos %s" %self.proc_cmd("getpos"))
+		#return self.song_pos[0]
 		
 	def get_end(self,*args):
 		x=[int(i) for i in self.proc_cmd("mend")]
@@ -528,31 +582,37 @@ class zynthian_engine_midish(zynthian_engine):
 		
 	def pause(self,*args):
 		self.proc_cmd("i")
-		self.play_rec.set(False)
+		self.play_rec.set('Idle')
 		#self.update_song_length()
 
 	def play(self,*args):
-		if self.play_rec.get():
-			self.play_rec.set(False)
+		if self.play_rec.get()=='Playing':
+			self.play_rec.set('Idle')
 			self.proc_cmd("i")
 		else:
-			self.play_rec.set(True)
+			self.play_rec.set('Playing')
 			self.proc_cmd("p")
 		
-	def stop(self,*args):
+	def stop_playback(self,*args):
 		self.proc_cmd("s")
-		self.play_rec.set(False)
+		self.play_rec.set('Stopped')
 		# self.update_song_length()
 
 	def save(self,*args):
-		self.proc_cmd("save")
-		self.play_rec.set(False)
+		if (self.play_rec.get()=='Playing',self.play_rec.get()=='Recording'):
+			self.play_rec.set('Stopped')
+			self.proc_cmd("s")
+		self.proc_cmd("save %s" %args)
+		
 		# self.update_song_length()
 	
 	def load(self,*args):
+		if (self.play_rec.get()=='Playing',self.play_rec.get()=='Recording'):
+			self.play_rec.set('Stopped')
+			self.proc_cmd("s")
 		self.proc_cmd("load")
-		self.play_rec.set(False)
-		# self.update_song_length()
+		
+		
 			
 	
 		
@@ -573,6 +633,8 @@ class filter(object):
 	out_dev=None
 	in_midich=0
 	out_midich=0
+	rules=[]
+	rule={'type':None, 'from_dev':'1', 'to_dev':'0'}
 	
 	def __init__(self):
 		pass

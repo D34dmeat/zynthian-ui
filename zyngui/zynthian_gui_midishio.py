@@ -41,6 +41,7 @@ from . import zynthian_gui_selector
 jclient=None
 clientno=None
 
+
 #------------------------------------------------------------------------------
 # Configure logging
 #------------------------------------------------------------------------------
@@ -53,8 +54,18 @@ logging.basicConfig(stream=sys.stderr, level=zynthian_gui_config.log_level)
 #-------------------------------------------------------------------------------
 
 class zynthian_gui_midishio(zynthian_gui_selector):
+	
+	def __init__(self):	
+		self.select_actions=[(self.clear_track,"tclr","Clear selection in current track"),
+			(self.cut_track,"tcut","Cut selection in current track"),
+			(self.insert_track,"tins","Insert blank selection in current track"),
+			(self.copy_track,"tcopy","Copy selection in current track"),
+			(self.paste_track,"tcut","Paste selection to current track"),
+			(self.duplicate_selection_pre,"mdup 0","Duplicate selection of song before"),
+			(self.duplicate_selection_post,"mdup","Duplicate selection of song after"),
+			(self.quanta_selection,"tquanta","Quantizise selection of current track note on note off"),
+			(self.quantf_selection,"tquantf","Quantizise selection of current track only note on")]
 
-	def __init__(self):
 		self.clientno=None
 		self.current_track=''
 		self.last_action=None
@@ -111,15 +122,22 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		if self.mode =='track':
 		
 			logging.info("output =8> %s" %self.current_track)
-			self.list_data.append((self.set_select_path,0,self.current_track))
+			self.list_data.append((self.set_select_path,0,"Track Name: "+self.current_track))
 			self.tinfo=zynthian_gui_config.zyngui.curlayer.engine.get_trackinfo(tname=self.current_track)
-			self.list_data.append((self.set_select_path,0,self.tinfo['fname']))
+			self.list_data.append((self.set_select_path,0,"Track filter: "+self.tinfo['fname']))
 			for line in self.tinfo['filtero']:
-				self.list_data.append((self.set_select_path,0,line))
+				if line!='{' or line!='}':
+					self.list_data.append((self.set_select_path,0,line))
 				
 		if self.mode =='settings':
 			for option in self.get_options():
 				self.list_data.append((self.set_select_path,0,option))
+				
+				
+		if self.mode =='select_actions':
+			i=0
+			for action in self.select_actions:
+				self.list_data.append((action[0],i,action[2]))
 		#self.list_data.append(hw_out)
 		self.list_data.append((self.set_select_path,0,"empty"))
 		#self.list_data.append((self.set_start,0,"start"))
@@ -138,12 +156,14 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		super().show()
 
 	def select_action(self, i):
-		if zynthian_gui_config.zyngui.curlayer.engine.nickname=='MS':
-		#	zynthian_gui_config.zyngui.show_screen('info')
-			zynthian_gui_config.zyngui.show_info('info what the %s' %self.list_data[i][0], 1910)
+		# if zynthian_gui_config.zyngui.curlayer.engine.nickname=='MS':
+		# #	zynthian_gui_config.zyngui.show_screen('info')
+			# zynthian_gui_config.zyngui.show_info('info what the %s' %self.list_data[i][0], 1910)
+			# self.last_action=self.list_data[i][0]
+			# self.last_action()
+		if self.mode =='select_actions':
 			self.last_action=self.list_data[i][0]
-			self.last_action()
-
+			self.last_action(i)
 		else:
 			#zynthian_gui_config.zyngui.curlayer.set_preset(i)
 			zynthian_gui_config.zyngui.show_screen('seqcontrol')
@@ -168,14 +188,14 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 			logging.info("rule %s" %rule)
 	
 	def cb_listbox_motion(self,event):
-		if self.mode=='select':
+		if self.mode=='bselect':
 			super().cb_listbox_motion(event)
 		else:
 			dts=(datetime.now()-self.listbox_push_ts).total_seconds()
 			if dts>0.1:
 				index=self.get_cursel()
 				if index!=self.index:
-					#logging.debug("LISTBOX MOTION => %d" % self.index)
+					logging.debug("LISTBOX MOTION => %d" % self.index)
 					zynthian_gui_config.zyngui.start_loading()
 					#self.select_listbox(self.get_cursel())
 					zynthian_gui_config.zyngui.stop_loading()
@@ -217,7 +237,24 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		logging.info("Physical Devices: " + str(hw_out))
 		list=hw_out
 		return list
-
+	def clear_track(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def cut_track(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def insert_track(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def copy_track(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def paste_track(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def duplicate_selection_pre(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def duplicate_selection_post(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def quanta_selection(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
+	def quantf_selection(self, i):
+		logging.info("select action: %s"%self.select_actions[i][1])
 	#def set_select_path(self):
 	#	if zynthian_gui_config.zyngui.curlayer:
 	#		self.select_path.set(zynthian_gui_config.zyngui.curlayer.get_bankpath())
