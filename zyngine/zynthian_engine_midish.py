@@ -87,6 +87,7 @@ class zynthian_engine_midish(zynthian_engine):
 		self.tbar=None
 		#self.ready=False
 		self.looping=False
+		self.qstrength=100
 		
 		# start the a2j and j2a bridge connecting it to the blank midish ports
 		os.system("a2jmidi_bridge midish_out &")

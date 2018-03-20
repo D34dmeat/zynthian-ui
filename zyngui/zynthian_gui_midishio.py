@@ -56,26 +56,28 @@ logging.basicConfig(stream=sys.stderr, level=zynthian_gui_config.log_level)
 class zynthian_gui_midishio(zynthian_gui_selector):
 	
 	def __init__(self):	
-		self.select_actions=[(self.clear_track,"tclr","Clear selection in current track"),
-			(self.cut_track,"tcut","Cut selection in current track"),
-			(self.insert_track,"tins","Insert blank selection in current track"),
-			(self.copy_track,"tcopy","Copy selection in current track"),
-			(self.paste_track,"tcut","Paste selection to current track"),
-			(self.duplicate_selection_pre,"mdup 0","Duplicate selection of song before"),
-			(self.duplicate_selection_post,"mdup","Duplicate selection of song after"),
-			(self.quanta_selection,"tquanta","Quantizise selection of current track note on note off"),
-			(self.quantf_selection,"tquantf","Quantizise selection of current track only note on")]
+		self.select_actions=[(self.sel_act,"tclr","Clear selection in current track"),
+			(self.sel_act,"tcut","Cut selection in current track"),
+			(self.sel_act,"tins","Insert blank selection in current track"),
+			(self.sel_act,"tcopy","Copy selection in current track"),
+			(self.sel_act,"tpaste","Paste selection to current track"),
+			(self.sel_act,"mdup 0","Duplicate selection of song before"),
+			(self.sel_act,"mdup","Duplicate selection of song after"),
+			(self.sel_act,"tquanta","Quantizise selection of current track note on note off"),
+			(self.sel_act,"tquantf","Quantizise selection of current track only note on")]
 
+		
 		self.clientno=None
 		self.current_track=''
 		self.last_action=None
 		self.mode=''
-		self.jclient=jack.Client("midish_ioselect")
+		#self.jclient=jack.Client("midish_ioselect")
 		super().__init__('Preset', True)
       
-	def set_mode(self):
-		self.mode=zynthian_gui_config.zyngui.curlayer.engine.settings
-		#return 'track_9'
+	def set_mode(self, mode):
+		self.mode=mode
+		zynthian_gui_config.zyngui.curlayer.engine.settings=mode
+		
 	
 	def get_mode(self):
 		self.mode=zynthian_gui_config.zyngui.curlayer.engine.settings
@@ -85,6 +87,7 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		#zynthian_gui_config.zyngui.curlayer.load_io_list()
 		#self.list_data.append(('di',0,self.get_seq_info()))
 		res=[]
+		logging.info("mode of operadus %s" %self.get_mode())
 		#cmd="aseqdump -l"
 		i=0
 		#output=check_output("a2jmidi_bridge midish", shell=True)
@@ -116,7 +119,7 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 
 		self.list_data=res
 		
-		logging.info("mode of operadus %s" %self.get_mode())
+		
 		self.current_track=zynthian_gui_config.zyngui.curlayer.engine.current_track
 		#track info
 		if self.mode =='track':
@@ -138,8 +141,8 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 			i=0
 			for action in self.select_actions:
 				self.list_data.append((action[0],i,action[2]))
-		#self.list_data.append(hw_out)
-		self.list_data.append((self.set_select_path,0,"empty"))
+		
+		#self.list_data.append((self.set_select_path,0,"empty"))
 		#self.list_data.append((self.set_start,0,"start"))
 
 		#check_output('aseqdump -l/n', shell=True).decode('utf-8','ignore')
@@ -148,6 +151,7 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 	def get_options(self):
 		options=[]
 		options.append("Current Bpm: %s"%zynthian_gui_config.zyngui.curlayer.engine.get_bpm())
+		options.append("Quantizise strength: %s"%zynthian_gui_config.zyngui.curlayer.engine.qstrength)
 		return options
 	
 	
@@ -237,24 +241,28 @@ class zynthian_gui_midishio(zynthian_gui_selector):
 		logging.info("Physical Devices: " + str(hw_out))
 		list=hw_out
 		return list
-	def clear_track(self, i):
+	def sel_act(self, i):
+		start, end = zynthian_gui_config.zyngui.curlayer.engine.current_selection[0], zynthian_gui_config.zyngui.curlayer.engine.current_selection[1]
+		com=self.select_actions[i][1]
+		zynthian_gui_config.zyngui.curlayer.engine.proc_cmd("sel %s"%str(end-start))
+		if com=='mdup':
+			zynthian_gui_config.zyngui.curlayer.engine.proc_cmd(com+' '+str(zynthian_gui_config.zyngui.curlayer.engine.song_lenght))
+		elif com=='tins':
+			zynthian_gui_config.zyngui.curlayer.engine.proc_cmd(com+' '+str(end-start))
+		elif com=='tquanta':
+			zynthian_gui_config.zyngui.curlayer.engine.proc_cmd("setq %s"%str(zynthian_gui_config.zyngui.curlayer.engine.quant_int))
+			sleep(2)
+			zynthian_gui_config.zyngui.curlayer.engine.proc_cmd(com+' '+str(zynthian_gui_config.zyngui.curlayer.engine.qstrength))
+		elif com=='tquantf':
+			zynthian_gui_config.zyngui.curlayer.engine.proc_cmd("setq %s"%str(zynthian_gui_config.zyngui.curlayer.engine.quant_int))
+			sleep(2)
+			zynthian_gui_config.zyngui.curlayer.engine.proc_cmd(com+' '+str(zynthian_gui_config.zyngui.curlayer.engine.qstrength))
+			
+		else:
+			zynthian_gui_config.zyngui.curlayer.engine.proc_cmd(com)
 		logging.info("select action: %s"%self.select_actions[i][1])
-	def cut_track(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
-	def insert_track(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
-	def copy_track(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
-	def paste_track(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
-	def duplicate_selection_pre(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
-	def duplicate_selection_post(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
-	def quanta_selection(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
-	def quantf_selection(self, i):
-		logging.info("select action: %s"%self.select_actions[i][1])
+		logging.info("from: %s to: %s"%(start,end))
+	
 	#def set_select_path(self):
 	#	if zynthian_gui_config.zyngui.curlayer:
 	#		self.select_path.set(zynthian_gui_config.zyngui.curlayer.get_bankpath())

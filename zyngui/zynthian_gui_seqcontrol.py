@@ -587,7 +587,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 			width = button_width,
 			activebackground=zynthian_gui_config.color_ctrl_bg_on,
 			font=zynthian_gui_config.font_listbox,
-			relief = 'groove', textvariable = self.play_mode, command = self.loop)
+			relief = 'groove', text = "Loop", command = self.loop)
 			
 		metr = tkinter.Button(self.ctrlbar,
 			bg=zynthian_gui_config.color_panel_bg,
