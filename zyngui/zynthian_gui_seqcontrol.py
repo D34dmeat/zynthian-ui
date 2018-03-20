@@ -254,7 +254,7 @@ class zynthian_gui_seqcontrol(zynthian_gui_selector):
 		for cscr in zynthian_gui_config.zyngui.curlayer.engine.get_tracks(i):
 				self.list_data.append((cscr,i,cscr))
 				i=i+1
-		self.index=zynthian_gui_config.zyngui.curlayer.get_active_screen_index()
+		self.index=self.selected_track#zynthian_gui_config.zyngui.curlayer.get_active_screen_index()
 		#logging.debug("get tracks %s" % (zynthian_gui_config.zyngui.curlayer.engine.get_tracks(i)))
 		super().fill_list()
 
